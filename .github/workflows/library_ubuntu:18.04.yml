@@ -1,0 +1,58 @@
+name: Build and Push Multi-arch Ubuntu 18.04
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '.github/workflows/library_ubuntu:18.04.yml'
+
+jobs:
+  build-multi-arch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Pull, tag and push amd64 image
+        run: |
+          docker pull --platform linux/amd64 ubuntu:18.04
+          docker tag ubuntu:18.04 ghcr.io/packages-mirror/library/ubuntu:18.04-amd64
+          docker push ghcr.io/packages-mirror/library/ubuntu:18.04-amd64
+
+      - name: Pull, tag and push arm64 image
+        run: |
+          docker pull --platform linux/arm64 ubuntu:18.04
+          docker tag ubuntu:18.04 ghcr.io/packages-mirror/library/ubuntu:18.04-arm64
+          docker push ghcr.io/packages-mirror/library/ubuntu:18.04-arm64
+
+      - name: Create and push manifest
+        run: |
+          docker manifest create ghcr.io/packages-mirror/library/ubuntu:18.04 \
+            --amend ghcr.io/packages-mirror/library/ubuntu:18.04-amd64 \
+            --amend ghcr.io/packages-mirror/library/ubuntu:18.04-arm64
+
+          docker manifest annotate ghcr.io/packages-mirror/library/ubuntu:18.04 \
+            ghcr.io/packages-mirror/library/ubuntu:18.04-amd64 \
+            --arch amd64 --os linux
+
+          docker manifest annotate ghcr.io/packages-mirror/library/ubuntu:18.04 \
+            ghcr.io/packages-mirror/library/ubuntu:18.04-arm64 \
+            --arch arm64 --os linux
+
+          docker manifest push ghcr.io/packages-mirror/library/ubuntu:18.04
+
+      - name: Clean up
+        run: |
+          docker manifest rm ghcr.io/packages-mirror/library/ubuntu:18.04
+          docker image rm ghcr.io/packages-mirror/library/ubuntu:18.04-amd64
+          docker image rm ghcr.io/packages-mirror/library/ubuntu:18.04-arm64
