@@ -33,6 +33,7 @@ jobs:
           git clone https://github.com/iamgio/quarkdown.git
           cd quarkdown
           git checkout v1.14.1
+          curl -L -o build/distributions/quarkdown.zip https://github.com/iamgio/quarkdown/releases/download/v1.14.1/quarkdown.zip
 
       - name: Build and push multi-arch image
         run: |
